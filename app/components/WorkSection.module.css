@@ -1,0 +1,257 @@
+.section {
+    position: relative;
+    width: 100%;
+    height: 400vh;
+  }
+  
+  .stickyBox {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    opacity: var(--ipad-opacity, 0);
+    transition: opacity 0.8s ease-in;
+  }
+  
+  .content {
+    max-width: 960px;
+    width: 100%;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .tablet {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .tabletFrame {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-radius: 28px;
+    padding: 24px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4), 
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+                0 2px 4px rgba(0, 0, 0, 0.3) inset;
+    position: relative;
+  }
+
+  .tabletFrame::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 8px;
+    background: #0a0a0a;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) inset;
+  }
+
+  .tabletScreen {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    transition: background-image 0.3s ease;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .hoverOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease, background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+    z-index: 2;
+    pointer-events: none;
+    padding: 40px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+
+  .tabletScreen:hover .hoverOverlay {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(100px);
+    -webkit-backdrop-filter: blur(100px);
+  }
+
+  .hoverTitle {
+    font-family: var(--font-crimson-pro);
+    font-weight: 600;
+    font-size: 2.5rem;
+    line-height: 1.2;
+    color: #ffffff;
+    margin: 0 0 16px 0;
+  }
+
+  .hoverSubtitle {
+    font-family: var(--font-inter);
+    font-weight: 400;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .screenContent {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tabContent {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .tabControls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .tabButton {
+    width: 12px;
+    height: 40px;
+    border-radius: 6px;
+    border: none;
+    background: #d0d0d0;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .tabButton:hover {
+    background: #b0b0b0;
+  }
+
+  .tabButton:active {
+    transform: scale(0.95);
+    background: #a0a0a0;
+  }
+
+  .tabButton.active {
+    background: #666666;
+  }
+
+  .tabButton.active:hover {
+    background: #555555;
+  }
+
+  .tabButton.active:active {
+    transform: scale(0.95);
+    background: #444444;
+  }
+
+  /* Mobile and Tablet - Remove scroll animations, make section taller */
+  @media (max-width: 1024px) {
+    .section {
+      height: 100vh;
+    }
+
+    .stickyBox {
+      position: relative;
+      height: 100vh;
+    }
+
+    .tablet {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .tabletFrame {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      aspect-ratio: 3 / 4;
+    }
+  }
+
+  /* Mobile Portrait - Make tablet 100vh and fix clipping */
+  @media (max-width: 768px) {
+    .section {
+      height: 100vh;
+    }
+
+    .stickyBox {
+      height: 100vh;
+      padding: 0;
+    }
+
+    .content {
+      height: 100vh;
+      padding: 16px;
+      gap: 20px;
+    }
+
+    .tablet {
+      width: 100%;
+      max-width: 100%;
+      height: calc(100vh - 80px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tabletFrame {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: auto;
+      padding: 16px;
+      border-radius: 20px;
+    }
+
+    .tabletScreen {
+      border-radius: 12px;
+    }
+  }
