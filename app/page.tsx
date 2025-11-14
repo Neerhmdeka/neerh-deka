@@ -12,6 +12,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState(1);
   const servicesSectionRef = useRef<HTMLElement>(null);
   const articlesSectionRef = useRef<HTMLElement>(null);
+  const unicornStudioRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkHeaderVisibility = () => {
@@ -118,6 +119,43 @@ export default function Home() {
       section.removeEventListener('mouseup', handleMouseUp);
       section.removeEventListener('mousemove', handleMouseMove);
     };
+  }, []);
+
+  // Load Unicorn Studio script
+  useEffect(() => {
+    if (!window.UnicornStudio) {
+      window.UnicornStudio = { isInitialized: false };
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.34/dist/unicornStudio.umd.js';
+      script.onload = () => {
+        if (window.UnicornStudio && !window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
+          window.UnicornStudio.init();
+          window.UnicornStudio.isInitialized = true;
+        }
+      };
+      (document.head || document.body).appendChild(script);
+    } else if (!window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
+      window.UnicornStudio.init();
+      window.UnicornStudio.isInitialized = true;
+    }
+
+    // Hide any attribution buttons that might appear
+    const hideAttribution = () => {
+      const attributionElements = document.querySelectorAll('[data-us-attribution], a[href*="unicornstudio"], a[href*="unicorn.studio"], [class*="attribution"], [class*="powered-by"], [id*="attribution"], [id*="unicorn"]');
+      attributionElements.forEach((el) => {
+        (el as HTMLElement).style.display = 'none';
+        (el as HTMLElement).style.visibility = 'hidden';
+        (el as HTMLElement).style.opacity = '0';
+        (el as HTMLElement).style.position = 'absolute';
+        (el as HTMLElement).style.left = '-9999px';
+      });
+    };
+
+    // Run immediately and also after a delay to catch dynamically added elements
+    hideAttribution();
+    const interval = setInterval(hideAttribution, 200);
+    
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -396,6 +434,9 @@ export default function Home() {
       </section>
 
       <section className={styles.contactSection} id="contact">
+        <div className={styles.unicornStudioContainer} ref={unicornStudioRef}>
+          <div data-us-project="pTYipWGeJQxikWiaxEQU" style={{width: '100%', height: '100%'}}></div>
+        </div>
         <div className={styles.container}>
           <h2 className={styles.contactTitle}>Get in touch</h2>
           <p className={styles.contactText}>Have a project in mind? Let's discuss how we can bring your vision to life.</p>
