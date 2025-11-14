@@ -4,25 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import styles from './page.module.css';
 import WorkSection from './components/WorkSection';
 
-declare global {
-  interface Window {
-    UnicornStudio?: {
-      isInitialized: boolean;
-      init?: () => void;
-    };
-  }
-}
 
 export default function Home() {
   const [headerVisible, setHeaderVisible] = useState(false);
   const [servicesVisible, setServicesVisible] = useState(false);
   const [articlesVisible, setArticlesVisible] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
-  const [glowIntensity, setGlowIntensity] = useState(0);
   const servicesSectionRef = useRef<HTMLElement>(null);
   const articlesSectionRef = useRef<HTMLElement>(null);
-  const contactSectionRef = useRef<HTMLElement>(null);
-  const unicornStudioRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkHeaderVisibility = () => {
@@ -131,72 +120,8 @@ export default function Home() {
     };
   }, []);
 
-  // Load Unicorn Studio script
-  useEffect(() => {
-    if (!window.UnicornStudio) {
-      window.UnicornStudio = { isInitialized: false };
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.34/dist/unicornStudio.umd.js';
-      script.onload = () => {
-        if (window.UnicornStudio && !window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
-          window.UnicornStudio.init();
-          window.UnicornStudio.isInitialized = true;
-        }
-      };
-      (document.head || document.body).appendChild(script);
-    } else if (!window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
-      window.UnicornStudio.init();
-      window.UnicornStudio.isInitialized = true;
-    }
-
-    // Hide any attribution buttons that might appear
-    const hideAttribution = () => {
-      const attributionElements = document.querySelectorAll('[data-us-attribution], a[href*="unicornstudio"], a[href*="unicorn.studio"], [class*="attribution"], [class*="powered-by"], [id*="attribution"], [id*="unicorn"]');
-      attributionElements.forEach((el) => {
-        (el as HTMLElement).style.display = 'none';
-        (el as HTMLElement).style.visibility = 'hidden';
-        (el as HTMLElement).style.opacity = '0';
-        (el as HTMLElement).style.position = 'absolute';
-        (el as HTMLElement).style.left = '-9999px';
-      });
-    };
-
-    // Run immediately and also after a delay to catch dynamically added elements
-    hideAttribution();
-    const interval = setInterval(hideAttribution, 200);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate glow intensity based on scroll position
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!contactSectionRef.current) return;
-
-      const contactSection = contactSectionRef.current;
-      const contactTop = contactSection.getBoundingClientRect().top;
-      const windowHeight = window.innerHeight;
-      
-      // Start showing glow when we're 2 viewport heights before contact section
-      // Full intensity when contact section is in view
-      const startGlowAt = windowHeight * 2;
-      const scrollProgress = Math.max(0, Math.min(1, (startGlowAt - contactTop) / (startGlowAt + windowHeight)));
-      
-      setGlowIntensity(scrollProgress);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial calculation
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
     <>
-      <div className={styles.viewportGlow} style={{ opacity: glowIntensity }}>
-        <div className={styles.glowLeft}></div>
-        <div className={styles.glowRight}></div>
-      </div>
       <div className={styles.page}>
         <header className={`${styles.header} ${headerVisible ? styles.visible : ''}`}>
           <div className={styles.container}>
@@ -470,10 +395,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.contactSection} id="contact" ref={contactSectionRef}>
-        <div className={styles.unicornStudioContainer} ref={unicornStudioRef}>
-          <div data-us-project="pTYipWGeJQxikWiaxEQU" style={{width: '100%', height: '100%'}}></div>
-        </div>
+      <section className={styles.contactSection} id="contact">
         <div className={styles.container}>
           <h2 className={styles.contactTitle}>Get in touch</h2>
           <p className={styles.contactText}>Have a project in mind? Let's discuss how we can bring your vision to life.</p>
