@@ -4,23 +4,18 @@ import { useEffect, useState, useRef } from 'react';
 import styles from './page.module.css';
 import WorkSection from './components/WorkSection';
 
-declare global {
-  interface Window {
-    UnicornStudio?: {
-      isInitialized: boolean;
-      init?: () => void;
-    };
-  }
-}
 
 export default function Home() {
   const [headerVisible, setHeaderVisible] = useState(false);
   const [servicesVisible, setServicesVisible] = useState(false);
   const [articlesVisible, setArticlesVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState(1);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [cursorType, setCursorType] = useState<'default' | 'drag'>('default');
+  const [visionProgress, setVisionProgress] = useState(0);
   const servicesSectionRef = useRef<HTMLElement>(null);
   const articlesSectionRef = useRef<HTMLElement>(null);
-  const unicornStudioRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLElement>(null);
+  const visionSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const checkHeaderVisibility = () => {
@@ -44,7 +39,7 @@ export default function Home() {
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.6 }
     );
 
     if (servicesSectionRef.current) {
@@ -129,65 +124,104 @@ export default function Home() {
     };
   }, []);
 
-  // Load Unicorn Studio script
-  useEffect(() => {
-    if (!window.UnicornStudio) {
-      window.UnicornStudio = { isInitialized: false };
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.34/dist/unicornStudio.umd.js';
-      script.onload = () => {
-        if (window.UnicornStudio && !window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
-          window.UnicornStudio.init();
-          window.UnicornStudio.isInitialized = true;
-        }
-      };
-      (document.head || document.body).appendChild(script);
-    } else if (!window.UnicornStudio.isInitialized && window.UnicornStudio.init) {
-      window.UnicornStudio.init();
-      window.UnicornStudio.isInitialized = true;
-    }
 
-    // Hide any attribution buttons that might appear
-    const hideAttribution = () => {
-      const attributionElements = document.querySelectorAll('[data-us-attribution], a[href*="unicornstudio"], a[href*="unicorn.studio"], [class*="attribution"], [class*="powered-by"], [id*="attribution"], [id*="unicorn"]');
-      attributionElements.forEach((el) => {
-        (el as HTMLElement).style.display = 'none';
-        (el as HTMLElement).style.visibility = 'hidden';
-        (el as HTMLElement).style.opacity = '0';
-        (el as HTMLElement).style.position = 'absolute';
-        (el as HTMLElement).style.left = '-9999px';
-      });
+  // Custom cursor tracking
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setCursorPosition({ x: e.clientX, y: e.clientY });
     };
 
-    // Run immediately and also after a delay to catch dynamically added elements
-    hideAttribution();
-    const interval = setInterval(hideAttribution, 200);
-    
-    return () => clearInterval(interval);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Footer reveal animation
+
+  // Vision text scroll animation
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!visionSectionRef.current) return;
+
+      const section = visionSectionRef.current;
+      const rect = section.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const sectionHeight = section.offsetHeight; // 200vh
+      
+      // Animation only starts after section becomes sticky (when top reaches 0)
+      // Progress from 0 to 1 as user scrolls through the remaining 100vh after stick
+      const sectionTop = rect.top;
+      
+      // Only start animation when section is sticky (top <= 0)
+      if (sectionTop > 0) {
+        setVisionProgress(0);
+        return;
+      }
+      
+      // Calculate progress: 0 when section becomes sticky, 1 when scrolled through the section
+      // Since section is 200vh and sticky box is 100vh, we have 100vh of scroll range
+      const scrollPastSticky = -sectionTop; // How much we've scrolled past the sticky point
+      // Use the full section height minus viewport height to ensure we reach 1.0
+      const maxScroll = sectionHeight - windowHeight;
+      const scrollProgress = Math.max(0, Math.min(1, scrollPastSticky / maxScroll));
+      
+      setVisionProgress(scrollProgress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial calculation
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
     <>
-      <div className={styles.page}>
+      <div 
+        className={`${styles.customCursor} ${cursorType === 'drag' ? styles.cursorDrag : ''}`}
+        style={{
+          left: `${cursorPosition.x}px`,
+          top: `${cursorPosition.y}px`,
+        }}
+      >
+        {cursorType === 'drag' ? (
+          <div className={styles.dragCursor}>
+            <span>Drag</span>
+          </div>
+        ) : (
+          <>
+            <img src="/Cursor.png" alt="cursor" className={styles.cursorArrow} />
+            <div className={styles.cursorTooltip}>You</div>
+          </>
+        )}
+      </div>
+    <div className={styles.page}>
         <header className={`${styles.header} ${headerVisible ? styles.visible : ''}`}>
           <div className={styles.container}>
             <div className={styles.headerContent}>
               <a href="#" className={styles.logo} onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                <span>Neerh Deka</span>
+                <span className={styles.logoText}>
+                  {'Neerh Deka'.split('').map((char, index) => (
+                    <span key={index} className={styles.logoLetter} style={{ '--letter-index': index } as React.CSSProperties}>
+                      {char === ' ' ? '\u00A0' : char}
+                    </span>
+                  ))}
+                </span>
               </a>
               <nav className={styles.nav}>
                 <a href="#work">Work</a>
                 <a href="#expertise">Expertise</a>
                 <a href="#about">About</a>
               </nav>
-              <a href="#contact" className={styles.contactButton}>Contact</a>
+              <a href="#footer" className={styles.contactButton}>Contact</a>
             </div>
           </div>
         </header>
 
-        <main className={styles.main}>
+      <main className={styles.main}>
           <div className={styles.container}>
             <div className={styles.hero}>
+              <div className={styles.heroBadge}>
+                Hello there 👋 I am Neerh
+              </div>
               <h1 className={styles.heading}>
                 Let's shape the<br />
                 future, together
@@ -203,53 +237,125 @@ export default function Home() {
       {/* Move WorkSection outside .page container */}
       <WorkSection />
 
+      <section ref={visionSectionRef} className={styles.visionSection}>
+        <div className={styles.visionStickyBox}>
+          <div className={styles.container}>
+            <p className={styles.visionText}>
+              {(() => {
+                const text = "I will help your customers envision the future and show you the steps to get there";
+                const words = text.split(' ');
+                const totalChars = text.replace(/\s/g, '').length;
+                let charIndex = 0;
+                
+                return words.map((word, wordIndex) => {
+                  const wordChars = word.replace(/\s/g, '').split('');
+                  const wordStartProgress = charIndex / totalChars;
+                  const wordEndProgress = (charIndex + wordChars.length) / totalChars;
+                  
+                  // Check if this is "future" or "steps" word
+                  const isFuture = word.toLowerCase() === 'future';
+                  const isSteps = word.toLowerCase() === 'steps';
+                  
+                  const wordElements = wordChars.map((char, charIdx) => {
+                    const charStartProgress = (charIndex + charIdx) / totalChars;
+                    const charEndProgress = (charIndex + charIdx + 1) / totalChars;
+                    
+                    // Calculate color based on scroll progress
+                    // Add a small buffer to ensure the last character fully animates
+                    const progressRange = charEndProgress - charStartProgress;
+                    const charProgress = Math.max(0, Math.min(1, (visionProgress - charStartProgress) / (progressRange + 0.05)));
+                    
+                    let color;
+                    if (isFuture) {
+                      // Purple for "future" - same as navbar dot (#a855f7)
+                      // Transition from gray (#d3d3d3 = rgb(211,211,211)) to purple (#a855f7 = rgb(168,85,247))
+                      if (charProgress > 0.99) {
+                        color = '#a855f7';
+                      } else {
+                        const r = Math.round(211 - (211 - 168) * charProgress);
+                        const g = Math.round(211 - (211 - 85) * charProgress);
+                        const b = Math.round(211 - (211 - 247) * charProgress);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                      }
+                    } else if (isSteps) {
+                      // Purple for "steps" - same as navbar dot (#a855f7)
+                      // Transition from gray (#d3d3d3 = rgb(211,211,211)) to purple (#a855f7 = rgb(168,85,247))
+                      if (charProgress > 0.99) {
+                        color = '#a855f7';
+                      } else {
+                        const r = Math.round(211 - (211 - 168) * charProgress);
+                        const g = Math.round(211 - (211 - 85) * charProgress);
+                        const b = Math.round(211 - (211 - 247) * charProgress);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                      }
+                    } else {
+                      // Black for other words
+                      const grayValue = Math.round(211 - (211 * charProgress));
+                      color = charProgress > 0.99 ? '#000' : `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                    }
+                    
+                    return (
+                      <span
+                        key={`${wordIndex}-${charIdx}`}
+                        style={{ color, transition: 'color 0.1s ease' }}
+                      >
+                        {char}
+                      </span>
+                    );
+                  });
+                  
+                  charIndex += wordChars.length;
+                  
+                  return (
+                    <span key={wordIndex}>
+                      {wordElements}
+                      {wordIndex < words.length - 1 && ' '}
+                    </span>
+                  );
+                });
+              })()}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.brandsSection}>
         <div className={styles.brandsWrapper}>
           <div className={styles.brandsContainer}>
-            <div className={styles.brandLogo}><img src="/a.svg" alt="Klarna" /></div>
-            <div className={styles.brandLogo}><img src="/b.svg" alt="Ferrari" /></div>
-            <div className={styles.brandLogo}><img src="/c.svg" alt="Lamborghini" /></div>
-            <div className={styles.brandLogo}><img src="/d.svg" alt="Pepsi" /></div>
-            <div className={styles.brandLogo}><img src="/e.svg" alt="ClaseAzul" /></div>
-            <div className={styles.brandLogo}><img src="/f.svg" alt="F1" /></div>
-            <div className={styles.brandLogo}><img src="/g.svg" alt="FIFA" /></div>
-            <div className={styles.brandLogo}><img src="/h.svg" alt="Kick Sauber Stake F1" /></div>
-            <div className={styles.brandLogo}><img src="/i.svg" alt="La Cimbali" /></div>
-            <div className={styles.brandLogo}><img src="/j.svg" alt="Technogym" /></div>
-            <div className={styles.brandLogo}><img src="/k.svg" alt="Pernod Ricard" /></div>
-            <div className={styles.brandLogo}><img src="/l.svg" alt="KLM" /></div>
-            <div className={styles.brandLogo}><img src="/m.svg" alt="Spotify" /></div>
-            <div className={styles.brandLogo}><img src="/n.svg" alt="Dallara" /></div>
-            <div className={styles.brandLogo}><img src="/o.svg" alt="Illy" /></div>
+            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
+            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
+            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
+            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
+            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
+            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
+            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
+            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
+            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
+            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
+            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
+            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
             {/* Gap for seamless loop */}
-            <div style={{ width: '24px', flexShrink: 0 }}></div>
+            <div style={{ width: '48px', flexShrink: 0 }}></div>
             {/* Duplicate for seamless loop */}
-            <div className={styles.brandLogo}><img src="/a.svg" alt="Klarna" /></div>
-            <div className={styles.brandLogo}><img src="/b.svg" alt="Ferrari" /></div>
-            <div className={styles.brandLogo}><img src="/c.svg" alt="Lamborghini" /></div>
-            <div className={styles.brandLogo}><img src="/d.svg" alt="Pepsi" /></div>
-            <div className={styles.brandLogo}><img src="/e.svg" alt="ClaseAzul" /></div>
-            <div className={styles.brandLogo}><img src="/f.svg" alt="F1" /></div>
-            <div className={styles.brandLogo}><img src="/g.svg" alt="FIFA" /></div>
-            <div className={styles.brandLogo}><img src="/h.svg" alt="Kick Sauber Stake F1" /></div>
-            <div className={styles.brandLogo}><img src="/i.svg" alt="La Cimbali" /></div>
-            <div className={styles.brandLogo}><img src="/j.svg" alt="Technogym" /></div>
-            <div className={styles.brandLogo}><img src="/k.svg" alt="Pernod Ricard" /></div>
-            <div className={styles.brandLogo}><img src="/l.svg" alt="KLM" /></div>
-            <div className={styles.brandLogo}><img src="/m.svg" alt="Spotify" /></div>
-            <div className={styles.brandLogo}><img src="/n.svg" alt="Dallara" /></div>
-            <div className={styles.brandLogo}><img src="/o.svg" alt="Illy" /></div>
+            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
+            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
+            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
+            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
+            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
+            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
+            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
+            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
+            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
+            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
+            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
+            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
           </div>
         </div>
-        <div className={styles.brandsText}>Companies I worked with or for</div>
       </section>
 
       <section ref={servicesSectionRef} className={styles.servicesSection} id="expertise">
         <div className={styles.container}>
           <h2 className={styles.servicesTitle}>What I can do for you</h2>
-          <p className={styles.servicesDescription}>
-            I will help your customers envision the <span className={styles.highlight}>future</span> and show you the <span className={styles.highlight}>steps</span> to get there
-          </p>
           <ul className={styles.servicesList}>
             <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem1}`}>
               <span className={styles.serviceNumber}>01</span>
@@ -272,21 +378,24 @@ export default function Home() {
               <span className={styles.serviceName}>Startup Design Advisor</span>
             </li>
           </ul>
-          <button className={styles.learnMoreButton}>Learn more</button>
         </div>
       </section>
 
       <section ref={articlesSectionRef} className={styles.articlesSection} id="articles">
         <div className={styles.articlesWrapper}>
-          <div className={`${styles.articlesContainer} ${articlesVisible ? styles.animated : ''}`}>
+          <div 
+            className={`${styles.articlesContainer} ${articlesVisible ? styles.animated : ''}`}
+            onMouseEnter={() => setCursorType('drag')}
+            onMouseLeave={() => setCursorType('default')}
+          >
             <a 
               href="https://medium.com/@mriganavdeka/beyond-the-algorithm-the-profound-power-of-product-detail-9058ccb5b2d4" 
               target="_blank" 
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock1}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock1}`}
             >
-              <img src="https://miro.medium.com/v2/resize:fill:320:214/1*KR7DnwdQxA0nlJRriTKEqQ.png" alt="Beyond the algorithm: The profound power of product detail" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>Beyond the algorithm: The profound power of product detail</h3>
               </div>
             </a>
@@ -294,10 +403,10 @@ export default function Home() {
               href="https://medium.com/@mriganavdeka/what-is-a-designer-eb5d352c9043" 
               target="_blank" 
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock2}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock2}`}
             >
-              <img src="https://miro.medium.com/v2/resize:fill:320:214/1*cw5nFvjJbdweqHVOXUQ0rA.png" alt="What is a Designer?" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>What is a Designer?</h3>
               </div>
             </a>
@@ -305,10 +414,10 @@ export default function Home() {
               href="https://medium.com/@mriganavdeka/the-myth-of-customer-centricity-iconic-products-defied-their-users-and-why-you-should-too-b68ba4f3561c" 
               target="_blank" 
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock3}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock3}`}
             >
-              <img src="https://miro.medium.com/v2/da:true/resize:fill:320:214/0*ZfK9SOD20AOgA27c" alt="The Myth of 'Customer-Centricity': Iconic products defied their users" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The Myth of 'Customer-Centricity': Iconic products defied their users</h3>
               </div>
             </a>
@@ -316,54 +425,54 @@ export default function Home() {
               href="https://medium.com/@mriganavdeka/the-feature-funeral-why-your-saas-innovation-depends-on-killing-your-darlings-ff69988ed38a" 
               target="_blank" 
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock4}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock4}`}
             >
-              <img src="https://miro.medium.com/v2/resize:fill:320:214/1*ssXH29tINN6KwwSPf-W2jQ.jpeg" alt="The Feature Funeral: Why your SaaS innovation depends on killing your darlings" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The Feature Funeral: Why your SaaS innovation depends on killing your darlings</h3>
               </div>
             </a>
             <a 
               href="https://medium.com/design-bootcamp/the-ai-ready-design-system-the-5-components-your-component-library-must-update-first-531309f35d85" 
-              target="_blank" 
+              target="_blank"
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock5}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock5}`}
             >
-              <img src="https://miro.medium.com/v2/resize:fill:320:214/1*p0bNGI7ZpkdJxk_-ulhrSA.png" alt="The AI-ready design system: The 5 components your component library must update first" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The AI-ready design system: The 5 components your component library must update first</h3>
               </div>
             </a>
             <a 
               href="https://medium.com/@mriganavdeka/the-drag-and-drop-delusion-why-no-code-solves-the-wrong-creative-pain-dcb1efba804c" 
-              target="_blank" 
+              target="_blank"
               rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock6}`}
+              className={`${styles.articleCardWrapper} ${styles.articleBlock6}`}
             >
-              <img src="https://miro.medium.com/v2/resize:fill:320:214/1*gOkSdKCvyiYnZQk3gPi3kA.png" alt="The Drag-&-Drop delusion: Why no-code solves the wrong creative pain" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The Drag-&-Drop delusion: Why no-code solves the wrong creative pain</h3>
-              </div>
+        </div>
             </a>
-            <a 
+          <a
               href="https://medium.com/@mriganavdeka/the-ai-paradox-when-more-friction-leads-to-better-ux-and-stronger-retention-ec203aabb0f9" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock7}`}
+            target="_blank"
+            rel="noopener noreferrer"
+              className={`${styles.articleCardWrapper} ${styles.articleBlock7}`}
             >
-              <img src="https://miro.medium.com/v2/da:true/resize:fill:320:214/0*hJXwIIrMJ0LzAE5g" alt="The AI Paradox: When more friction leads to better UX and stronger retention" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The AI Paradox: When more friction leads to better UX and stronger retention</h3>
               </div>
-            </a>
-            <a 
+          </a>
+          <a
               href="https://medium.com/@mriganavdeka/the-data-shackles-why-being-data-driven-kills-your-next-breakthrough-afeb1157e997" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleBlock} ${styles.articleBlock8}`}
+            target="_blank"
+            rel="noopener noreferrer"
+              className={`${styles.articleCardWrapper} ${styles.articleBlock8}`}
             >
-              <img src="https://miro.medium.com/v2/da:true/resize:fill:320:214/0*7lmdkb9BOQzImcnl" alt="The data shackles: Why being data-driven kills your next breakthrough" />
-              <div className={styles.articleOverlay}>
+              <div className={styles.articleBlock}></div>
+              <div className={styles.articleInfo}>
                 <h3 className={styles.articleTitle}>The data shackles: Why being data-driven kills your next breakthrough</h3>
               </div>
             </a>
@@ -372,90 +481,69 @@ export default function Home() {
       </section>
 
       <section className={styles.aboutSection} id="about">
-        <div className={styles.container}>
+        <div className={styles.aboutContainer}>
           <h2 className={styles.aboutTitle}>About me</h2>
-          <div className={styles.bentoGrid}>
-            <div className={`${styles.bentoCard} ${styles.bentoCardText}`}>
-              <p className={styles.bentoCardContent}>I'm passionate about creating digital experiences that make a real difference. With a decade of experience in product design, I've helped companies of all sizes transform their digital presence and better serve their users. I am also a software engineer, and design both physical and digital products with a focus on strategy.</p>
+          <p className={styles.aboutIntro}>I'm passionate about creating digital experiences that make a real difference. With a decade of experience in product design, I've helped companies of all sizes transform their digital presence and better serve their users.</p>
+          <div className={styles.aboutCards}>
+            <div className={`${styles.aboutCard} ${styles.aboutCardEveryone}`}>
+              <div className={styles.aboutCardLabel}>For Everyone</div>
+              <p className={styles.aboutCardContent}>I'm a designer who cares about making beautiful things that help people and businesses. Currently a product designer at Bynder</p>
             </div>
-            <div className={`${styles.bentoCard} ${styles.bentoCardSkills}`}>
-              <ul className={styles.skillsList}>
-                <li>User Research & Testing</li>
-                <li>Information Architecture</li>
-                <li>Interaction Design</li>
-                <li>Design Systems</li>
-                <li>Prototyping</li>
-                <li>Visual Design</li>
-                <li>Accessibility (WCAG)</li>
-                <li>Design Thinking</li>
-              </ul>
+            <div className={`${styles.aboutCard} ${styles.aboutCardManagers}`}>
+              <div className={styles.aboutCardLabel}>Managers</div>
+              <p className={styles.aboutCardContent}>I'm a product designer with a decade of experience across brand and product, at companies large and small in various design disciplines.</p>
             </div>
-            <div className={`${styles.bentoCard} ${styles.bentoCardImage}`}>
-              <img src="/image 57.png" alt="" />
+            <div className={`${styles.aboutCard} ${styles.aboutCardDesigners}`}>
+              <div className={styles.aboutCardLabel}>Designers</div>
+              <p className={styles.aboutCardContent}>I'm a systems thinker with a high bar for quality. From process to pixels, I'll collaborate with you, learn from you, and help make something we're proud of.</p>
             </div>
-            <div className={`${styles.bentoCard} ${styles.bentoCardImage}`}>
-              <img src="/image 58.png" alt="" />
-            </div>
-            <div className={`${styles.bentoCard} ${styles.bentoCardTabs}`}>
-              <div className={styles.tabsContainer}>
-                <div className={styles.tabButtons}>
-                  <button 
-                    className={`${styles.tabButton} ${activeTab === 1 ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab(1)}
-                  >
-                    Everyone
-                  </button>
-                  <button 
-                    className={`${styles.tabButton} ${activeTab === 2 ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab(2)}
-                  >
-                    Hiring managers
-                  </button>
-                  <button 
-                    className={`${styles.tabButton} ${activeTab === 3 ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab(3)}
-                  >
-                    Designers
-                  </button>
-                  <button 
-                    className={`${styles.tabButton} ${activeTab === 4 ? styles.tabButtonActive : ''}`}
-                    onClick={() => setActiveTab(4)}
-                  >
-                    PM's and Engineers
-                  </button>
-                </div>
-                <div className={styles.tabContent}>
-                  {activeTab === 1 && <p>I'm a designer who cares about making beautiful things that help people and businesses. Currently a product designer at Bynder</p>}
-                  {activeTab === 2 && <p>I'm a product designer with a decade of experience across brand and product, at companies large and small in various design disciplines.</p>}
-                  {activeTab === 3 && <p>I'm a systems thinker with a high bar for quality. From process to pixels, I'll collaborate with you, learn from you, and help make something we're proud of.</p>}
-                  {activeTab === 4 && (
-                    <>
-                      <p>I bring end-to-end product acumen, from vision and strategy to discovery and delivery. I'll partner closely with you to generate the highest impact possible.</p>
-                      <p style={{ marginTop: '16px' }}>I'm {'{highly_technical}'} and while (I'm ≠ engineer anymore) I know my way /around & can speak "fluently" with you;</p>
-                    </>
-                  )}
-                </div>
-              </div>
+            <div className={`${styles.aboutCard} ${styles.aboutCardEngineers}`}>
+              <div className={styles.aboutCardLabel}>Engineers</div>
+              <p className={styles.aboutCardContent}>I'm {'{highly_technical}'} and while (I'm ≠ engineer anymore) I know my way /around & can speak "fluently" with you;</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className={styles.contactSection} id="contact">
-        <div className={styles.unicornStudioContainer} ref={unicornStudioRef}>
-          <div data-us-project="pTYipWGeJQxikWiaxEQU" style={{width: '100%', height: '100%'}}></div>
-        </div>
-        <div className={styles.container}>
-          <h2 className={styles.contactTitle}>Get in touch</h2>
-          <p className={styles.contactText}>Have a project in mind? Let's discuss how we can bring your vision to life.</p>
-          <a 
-            href="mailto:mriganavdeka@gmail.com"
-            className={styles.contactButton}
-          >
-            Contact
-          </a>
-        </div>
-      </section>
+      <footer id="footer" ref={footerRef} className={styles.footer}>
+        <div className={styles.footerContainer}>
+          <div className={styles.footerLeft}>
+            <div className={styles.footerLogo}>Neerh Deka</div>
+            <p className={styles.footerTagline}>Product designer crafting digital experiences that make a real difference</p>
+            <div className={styles.footerImages}>
+              <div className={styles.footerImageWrapper}>
+                <img src="/image 58.png" alt="" className={styles.footerImage} />
+                <div className={styles.footerImageLogo}>
+                  <img src="/3158176.png" alt="Apple Photos" />
+                </div>
+              </div>
+              <div className={styles.footerImageWrapper}>
+                <img src="/image 57.png" alt="" className={styles.footerImage} />
+                <div className={styles.footerImageLogo}>
+                  <img src="/Apple_Maps_Logo_3D.png" alt="Apple Maps" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.footerRight}>
+            <div className={styles.footerColumn}>
+              <div className={styles.footerLabel}>Contact</div>
+              <div className={styles.footerInfo}>
+                <p>mriganavdeka@gmail.com</p>
+                <p>Available for freelance projects</p>
+              </div>
+            </div>
+            <div className={styles.footerColumn}>
+              <div className={styles.footerLabel}>Links</div>
+              <div className={styles.footerLinks}>
+                <a href="https://medium.com/@mriganavdeka" target="_blank" rel="noopener noreferrer">Medium</a>
+                <a href="https://www.linkedin.com/in/mriganavdeka/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href="/Mriganav Deka CV.pdf" download="Mriganav Deka CV.pdf">CV</a>
+              </div>
+            </div>
+          </div>
+    </div>
+      </footer>
     </>
   );
 }
