@@ -4,6 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import styles from './page.module.css';
 import WorkSection from './components/WorkSection';
 
+declare global {
+  interface Window {
+    UnicornStudio?: {
+      isInitialized: boolean;
+      init?: () => void;
+    };
+  }
+}
 
 export default function Home() {
   const [headerVisible, setHeaderVisible] = useState(false);
