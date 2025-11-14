@@ -669,6 +669,26 @@
     color: #000;
     margin: 0;
     align-self: flex-start;
+    opacity: 0;
+  }
+
+  /* Hide titles initially when not animated */
+  .articlesContainer:not(.animated) .articleTitle {
+    opacity: 0;
+  }
+
+  /* Fade in titles after cards spread (1s delay to match spread animation) */
+  .articlesContainer.animated .articleTitle {
+    animation: fadeInTitle 0.8s ease-in-out 1s forwards;
+  }
+
+  @keyframes fadeInTitle {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
 
