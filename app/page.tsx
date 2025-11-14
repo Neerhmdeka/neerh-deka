@@ -18,8 +18,10 @@ export default function Home() {
   const [servicesVisible, setServicesVisible] = useState(false);
   const [articlesVisible, setArticlesVisible] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
+  const [glowIntensity, setGlowIntensity] = useState(0);
   const servicesSectionRef = useRef<HTMLElement>(null);
   const articlesSectionRef = useRef<HTMLElement>(null);
+  const contactSectionRef = useRef<HTMLElement>(null);
   const unicornStudioRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -166,8 +168,35 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // Calculate glow intensity based on scroll position
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!contactSectionRef.current) return;
+
+      const contactSection = contactSectionRef.current;
+      const contactTop = contactSection.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      
+      // Start showing glow when we're 2 viewport heights before contact section
+      // Full intensity when contact section is in view
+      const startGlowAt = windowHeight * 2;
+      const scrollProgress = Math.max(0, Math.min(1, (startGlowAt - contactTop) / (startGlowAt + windowHeight)));
+      
+      setGlowIntensity(scrollProgress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial calculation
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <>
+      <div className={styles.viewportGlow} style={{ opacity: glowIntensity }}>
+        <div className={styles.glowLeft}></div>
+        <div className={styles.glowRight}></div>
+      </div>
       <div className={styles.page}>
         <header className={`${styles.header} ${headerVisible ? styles.visible : ''}`}>
           <div className={styles.container}>
@@ -441,7 +470,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.contactSection} id="contact">
+      <section className={styles.contactSection} id="contact" ref={contactSectionRef}>
         <div className={styles.unicornStudioContainer} ref={unicornStudioRef}>
           <div data-us-project="pTYipWGeJQxikWiaxEQU" style={{width: '100%', height: '100%'}}></div>
         </div>
