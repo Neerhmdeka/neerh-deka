@@ -72,7 +72,7 @@ export default function Fun() {
 
       <section ref={triggerSectionRef} style={{ minHeight: '100vh', background: '#FBFCFD' }}></section>
 
-      <Footer triggerSectionRef={triggerSectionRef} />
+      <Footer />
     </>
   );
 }

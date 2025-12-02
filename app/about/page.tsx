@@ -206,7 +206,7 @@ export default function About() {
         </div>
       </section>
 
-      <Footer triggerSectionRef={aboutSectionRef} />
+      <Footer />
     </>
   );
 }
