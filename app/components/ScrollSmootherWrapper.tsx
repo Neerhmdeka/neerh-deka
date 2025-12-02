@@ -14,7 +14,6 @@ export default function ScrollSmootherWrapper({ children }: { children: React.Re
         gestureOrientation: 'vertical',
         smoothWheel: true,
         wheelMultiplier: 1,
-        smoothTouch: false,
         touchMultiplier: 2,
         infinite: false,
         lerp: 0.1,
