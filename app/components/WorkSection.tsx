@@ -47,6 +47,18 @@ export default function WorkSection({ onHoverChange, onCursorTextChange }: WorkS
     const handleScroll = () => {
       if (!sectionRef.current) return;
 
+      // Disable parallax and skew on mobile - make it a normal section
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        cardRefs.current.forEach((card) => {
+          if (card) {
+            card.style.transform = 'none';
+            card.style.marginTop = '0';
+          }
+        });
+        return;
+      }
+
       const section = sectionRef.current;
       const rect = section.getBoundingClientRect();
       const windowHeight = window.innerHeight;
@@ -81,9 +93,13 @@ export default function WorkSection({ onHoverChange, onCursorTextChange }: WorkS
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
     handleScroll(); // Initial calculation
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, []);
 
   return (

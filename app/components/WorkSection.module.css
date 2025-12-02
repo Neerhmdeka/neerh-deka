@@ -109,10 +109,29 @@
 
   .grid {
     grid-template-columns: 1fr;
-    gap: clamp(40px, 5vw, 60px);
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .projectCard {
+    transform: none !important;
+    margin-top: 0 !important;
+    will-change: auto;
+  }
+
+  .cardImage {
+    aspect-ratio: 16 / 9;
   }
 
   .cardContent {
-    padding: 12px;
+    padding: 8px;
+  }
+
+  .cardTitle {
+    font-size: 14px;
+  }
+
+  .cardDescription {
+    font-size: 10px;
   }
 }

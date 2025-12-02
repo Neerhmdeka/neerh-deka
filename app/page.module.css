@@ -2253,6 +2253,26 @@
 }
 
 @media (max-width: 768px) {
+  /* Fix scrolling on mobile - remove fixed height */
+  .main {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .page {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  /* Reduce padding and spacing on mobile */
+  :root {
+    --page-padding-x: 16px;
+    --section-padding-y: 32px;
+  }
+
   /* Disable all hover states on mobile */
   .nav a:hover,
   .nav a:hover::before {
@@ -2342,6 +2362,18 @@
     padding: clamp(24px, 3vw, 32px);
   }
 
+  /* Hero section - 80vh on mobile */
+  .hero {
+    height: 80vh;
+  }
+
+  /* Hero heading - smaller font on mobile, fits in 3 lines */
+  .heading {
+    font-size: 16px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
   /* Brands section - thinner on mobile */
   .brandsSection {
     height: 20vh;
@@ -2387,7 +2419,16 @@
   .articleBlock {
     width: 100%;
     max-width: 100%;
-    height: 300px;
+    height: 200px;
+  }
+
+  .articleImageWrapper {
+    aspect-ratio: 4 / 3;
+  }
+
+  .articleTitle {
+    font-size: 14px;
+    padding: 8px;
   }
 
   /* About section - stacked boxes */
