@@ -7,7 +7,7 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <nav className={styles.nav}>
-        <a href="#">HOME</a>
+        <a href="#" className={styles.homeLink}>HOME</a>
         <a href="#work">WORK</a>
         <a href="#articles">ARTICLES</a>
         <a href="#footer">CONTACT</a>

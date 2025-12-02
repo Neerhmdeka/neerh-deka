@@ -254,11 +254,20 @@ export default function Home() {
               <div className={styles.heroContainer}>
                 <Header />
                 <h1 className={styles.heading}>
-                  Hi, my name is Neerh, I am a <FlipWords words={['Designer', 'Developer', 'Founder', 'Strategist']} duration={1500} />
-                  <br />
-                  With almost a decade of experience who cares
-                  <br />
-                  about making beautiful things that help people.
+                  <span className={styles.headingDesktop}>
+                    Hi, my name is Neerh, I am a <FlipWords words={['Designer', 'Developer', 'Founder', 'Strategist']} duration={1500} />
+                    <br />
+                    With almost a decade of experience who cares
+                    <br />
+                    about making beautiful things that help people.
+                  </span>
+                  <span className={styles.headingMobile}>
+                    Hi, I am Neerh, a Designer
+                    <br />
+                    ith almost a decade of experience
+                    <br />
+                    I make things that help people.
+                  </span>
                 </h1>
               </div>
             </div>
