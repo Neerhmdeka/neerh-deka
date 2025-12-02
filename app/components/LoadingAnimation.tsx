@@ -8,7 +8,6 @@ export default function LoadingAnimation() {
   const [mounted, setMounted] = useState(false);
   const [scale, setScale] = useState(1);
   const [textOpacity, setTextOpacity] = useState(0);
-  const [headerVisible, setHeaderVisible] = useState(false);
   const hasStartedRef = useRef(false);
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export default function LoadingAnimation() {
     const animationDuration = 2500; // 2.5 seconds - faster animation
     let animationId: number | null = null;
     let timerId: NodeJS.Timeout | null = null;
-    let headerTriggered = false;
     
     const startAnimation = () => {
       const startTime = Date.now();
@@ -41,12 +39,6 @@ export default function LoadingAnimation() {
         const textProgress = Math.max(0, (progress - textStartDelay) / (1 - textStartDelay));
         const textOpacityProgress = Math.min(textProgress * 2, 1); // Faster fade in
         setTextOpacity(textOpacityProgress);
-        
-        // Show header after a delay (when progress reaches 60%)
-        if (progress >= 0.6 && !headerTriggered) {
-          headerTriggered = true;
-          setHeaderVisible(true);
-        }
         
         if (progress < 1) {
           animationId = requestAnimationFrame(animate);
@@ -74,10 +66,9 @@ export default function LoadingAnimation() {
   useEffect(() => {
     // Set CSS custom properties for animations
     document.documentElement.style.setProperty('--text-opacity', textOpacity.toString());
-    document.documentElement.style.setProperty('--header-visible', headerVisible ? '1' : '0');
     // iPad fades in with the same timing as text
     document.documentElement.style.setProperty('--ipad-opacity', textOpacity.toString());
-  }, [textOpacity, headerVisible]);
+  }, [textOpacity]);
 
   // Prevent scrolling during loading animation
   useEffect(() => {

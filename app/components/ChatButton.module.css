@@ -1,0 +1,151 @@
+.chatButton {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #D35E32;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(211, 94, 50, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 9999;
+}
+
+.chatButton:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(211, 94, 50, 0.5);
+}
+
+.chatButton:active {
+  transform: scale(0.95);
+}
+
+.chatBox {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 500px;
+  max-height: calc(100vh - 120px);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 9998;
+  overflow: hidden;
+}
+
+.chatBoxHeader {
+  padding: 20px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FAFCFD;
+}
+
+.chatBoxHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2E3845;
+  font-family: var(--font-inter);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #666;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #e5e5e5;
+}
+
+.chatBoxContent {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  font-family: var(--font-inter);
+  font-size: 14px;
+  color: #2E3845;
+}
+
+.chatBoxInput {
+  padding: 16px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  gap: 8px;
+  background: #FAFCFD;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-inter);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input:focus {
+  border-color: #D35E32;
+}
+
+.sendButton {
+  padding: 12px 24px;
+  background: #D35E32;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-inter);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sendButton:hover {
+  background: #b84a1f;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .chatButton {
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .chatBox {
+    bottom: 84px;
+    right: 20px;
+    left: 20px;
+    width: auto;
+    height: 400px;
+  }
+}
+
+

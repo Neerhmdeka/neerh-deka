@@ -1,57 +1,46 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './page.module.css';
 import WorkSection from './components/WorkSection';
+import Footer from './components/Footer';
+import Header from './components/Header';
+import { FlipWords } from '@/components/ui/flip-words';
 
+type MediumArticle = {
+  title: string;
+  link: string;
+  publishedAt: string;
+};
+
+const articleBackgroundClasses = [
+  styles.articleBlock1,
+  styles.articleBlock2,
+  styles.articleBlock3,
+  styles.articleBlock4,
+  styles.articleBlock5,
+  styles.articleBlock6,
+  styles.articleBlock7,
+  styles.articleBlock8,
+];
 
 export default function Home() {
-  const [headerVisible, setHeaderVisible] = useState(false);
-  const [servicesVisible, setServicesVisible] = useState(false);
   const [articlesVisible, setArticlesVisible] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [cursorType, setCursorType] = useState<'default' | 'drag'>('default');
   const [visionProgress, setVisionProgress] = useState(0);
-  const servicesSectionRef = useRef<HTMLElement>(null);
+  const [mediumArticles, setMediumArticles] = useState<MediumArticle[]>([]);
+  const [isLoadingArticles, setIsLoadingArticles] = useState(true);
+  const [articlesError, setArticlesError] = useState<string | null>(null);
+  const [isOverNav, setIsOverNav] = useState(false);
+  const [isOverWorkTab, setIsOverWorkTab] = useState(false);
+  const [workTabCursorText, setWorkTabCursorText] = useState<string | null>(null);
+  const [isOverArticleCard, setIsOverArticleCard] = useState(false);
+  const [articleCursorText, setArticleCursorText] = useState<string | null>(null);
   const articlesSectionRef = useRef<HTMLElement>(null);
-  const footerRef = useRef<HTMLElement>(null);
   const visionSectionRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const checkHeaderVisibility = () => {
-      const headerVisibleValue = getComputedStyle(document.documentElement)
-        .getPropertyValue('--header-visible');
-      setHeaderVisible(headerVisibleValue === '1');
-    };
-
-    const interval = setInterval(checkHeaderVisibility, 50);
-    checkHeaderVisibility();
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !servicesVisible) {
-            setServicesVisible(true);
-          }
-        });
-      },
-      { threshold: 0.6 }
-    );
-
-    if (servicesSectionRef.current) {
-      observer.observe(servicesSectionRef.current);
-    }
-
-    return () => {
-      if (servicesSectionRef.current) {
-        observer.unobserve(servicesSectionRef.current);
-      }
-    };
-  }, [servicesVisible]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -75,6 +64,7 @@ export default function Home() {
       }
     };
   }, [articlesVisible]);
+
 
   // Mouse drag scrolling for articles section
   useEffect(() => {
@@ -125,10 +115,29 @@ export default function Home() {
   }, []);
 
 
-  // Custom cursor tracking
+  // Custom cursor tracking for work tab, flip words, and nav
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setCursorPosition({ x: e.clientX, y: e.clientY });
+      
+      // Check if cursor is over nav
+      let isOverButton = false;
+      const nav = document.querySelector(`.${styles.nav}`);
+      if (nav) {
+        const navLinks = nav.querySelectorAll('a');
+        navLinks.forEach((link) => {
+          const rect = link.getBoundingClientRect();
+          if (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          ) {
+            isOverButton = true;
+          }
+        });
+      }
+      setIsOverNav(isOverButton);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -146,10 +155,10 @@ export default function Home() {
       const rect = section.getBoundingClientRect();
       const windowHeight = window.innerHeight;
       const sectionHeight = section.offsetHeight; // 200vh
+      const sectionTop = rect.top;
       
       // Animation only starts after section becomes sticky (when top reaches 0)
       // Progress from 0 to 1 as user scrolls through the remaining 100vh after stick
-      const sectionTop = rect.top;
       
       // Only start animation when section is sticky (top <= 0)
       if (sectionTop > 0) {
@@ -157,12 +166,14 @@ export default function Home() {
         return;
       }
       
-      // Calculate progress: 0 when section becomes sticky, 1 when scrolled through the section
-      // Since section is 200vh and sticky box is 100vh, we have 100vh of scroll range
+      // Calculate progress: 0 when section becomes sticky, 1+ when scrolled through the section
+      // Section height is 80vh + 60vh = 140vh, sticky box is 80vh
+      // Scroll range is 60vh for animation
       const scrollPastSticky = -sectionTop; // How much we've scrolled past the sticky point
-      // Use the full section height minus viewport height to ensure we reach 1.0
-      const maxScroll = sectionHeight - windowHeight;
-      const scrollProgress = Math.max(0, Math.min(1, scrollPastSticky / maxScroll));
+      // Use the scrollable height (section height - viewport height to account for sticky positioning)
+      const maxScroll = sectionHeight - windowHeight; // Total scrollable distance
+      // Allow progress to reach 1.2 to ensure all characters complete animation
+      const scrollProgress = Math.max(0, Math.min(1.2, scrollPastSticky / maxScroll));
       
       setVisionProgress(scrollProgress);
     };
@@ -173,126 +184,218 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchArticles = async () => {
+      try {
+        const response = await fetch('/api/medium-articles', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Failed to load articles (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (isMounted) {
+          setMediumArticles(Array.isArray(data.articles) ? data.articles : []);
+          setArticlesError(data.error || null);
+        }
+      } catch (error) {
+        console.error('Failed to load Medium articles', error);
+        if (isMounted) {
+          setMediumArticles([]);
+          setArticlesError('Unable to load Medium articles. The feed may be temporarily unavailable.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingArticles(false);
+        }
+      }
+    };
+
+    fetchArticles();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <>
-      <div 
-        className={`${styles.customCursor} ${cursorType === 'drag' ? styles.cursorDrag : ''}`}
-        style={{
-          left: `${cursorPosition.x}px`,
-          top: `${cursorPosition.y}px`,
-        }}
-      >
-        {cursorType === 'drag' ? (
-          <div className={styles.dragCursor}>
-            <span>Drag</span>
-          </div>
-        ) : (
-          <>
-            <img src="/Cursor.png" alt="cursor" className={styles.cursorArrow} />
-            <div className={styles.cursorTooltip}>You</div>
-          </>
-        )}
-      </div>
-    <div className={styles.page}>
-        <header className={`${styles.header} ${headerVisible ? styles.visible : ''}`}>
-          <div className={styles.container}>
-            <div className={styles.headerContent}>
-              <a href="#" className={styles.logo} onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                <span className={styles.logoText}>
-                  {'Neerh Deka'.split('').map((char, index) => (
-                    <span key={index} className={styles.logoLetter} style={{ '--letter-index': index } as React.CSSProperties}>
-                      {char === ' ' ? '\u00A0' : char}
-                    </span>
-                  ))}
-                </span>
-              </a>
-              <nav className={styles.nav}>
-                <a href="#work">Work</a>
-                <a href="#expertise">Expertise</a>
-                <a href="#about">About</a>
-              </nav>
-              <a href="#footer" className={styles.contactButton}>Contact</a>
-            </div>
-          </div>
-        </header>
-
-      <main className={styles.main}>
-          <div className={styles.container}>
-            <div className={styles.hero}>
-              <div className={styles.heroBadge}>
-                Hello there 👋 I am Neerh
+      {/* Custom Cursor - Rendered via portal to avoid transform issues */}
+      {typeof document !== 'undefined' && isOverWorkTab && workTabCursorText && createPortal(
+        <div
+          className={styles.cursorText}
+          style={{
+            left: `${cursorPosition.x + 20}px`,
+            top: `${cursorPosition.y + 8}px`,
+          }}
+        >
+          {workTabCursorText}
+        </div>,
+        document.body
+      )}
+      {typeof document !== 'undefined' && isOverArticleCard && articleCursorText && createPortal(
+        <div
+          className={styles.cursorText}
+          style={{
+            left: `${cursorPosition.x + 20}px`,
+            top: `${cursorPosition.y + 8}px`,
+          }}
+        >
+          {articleCursorText}
+        </div>,
+        document.body
+      )}
+      <div className={styles.page}>
+        <main className={styles.main}>
+          <div className={styles.hero}>
+            <div className={styles.heroWrapper}>
+              <div className={styles.heroContainer}>
+                <Header />
+                <h1 className={styles.heading}>
+                  Hi, my name is Neerh, I am a <FlipWords words={['Designer', 'Developer', 'Founder', 'Strategist']} duration={1500} />
+                  <br />
+                  With almost a decade of experience who cares
+                  <br />
+                  about making beautiful things that help people.
+                </h1>
               </div>
-              <h1 className={styles.heading}>
-                Let's shape the<br />
-                future, together
-              </h1>
-              <p className={styles.subtext}>
-                I'm a Senior product designer, with almost a decade of experience who cares about making beautiful things that help people and businesses.
-              </p>
             </div>
           </div>
+          <section className={styles.brandsSection}>
+            <div className={styles.brandsWrapper}>
+              <div className={styles.brandsContainer}>
+            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
+            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
+            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
+            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
+            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
+            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
+            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
+            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
+            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
+            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
+            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
+            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
+            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
+            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
+            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
+            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
+            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
+            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
+            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
+            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
+            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
+            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
+            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
+            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
 
-      {/* Move WorkSection outside .page container */}
-      <WorkSection />
+      <WorkSection 
+        onHoverChange={setIsOverWorkTab}
+        onCursorTextChange={setWorkTabCursorText}
+      />
+
+      <section ref={articlesSectionRef} className={styles.articlesSection} id="articles">
+        <div className={styles.articlesWrapper}>
+          <div className={styles.articlesHeader}>
+            <h2 className={styles.articlesSectionTitle}>Published articles</h2>
+            <a href="https://medium.com/@mriganavdeka" target="_blank" rel="noopener noreferrer" className={styles.readAllLink}>READ ALL</a>
+          </div>
+          <div className={styles.articlesGrid}>
+            {isLoadingArticles && (
+              <div className={styles.articlePlaceholder}>Loading the latest Medium articles…</div>
+            )}
+            {!isLoadingArticles && articlesError && (
+              <div className={styles.articlePlaceholder}>{articlesError}</div>
+            )}
+            {!isLoadingArticles && !articlesError && mediumArticles.length === 0 && (
+              <div className={styles.articlePlaceholder}>No Medium articles to display yet.</div>
+            )}
+            {mediumArticles.slice(0, 8).map((article, index) => {
+              const wrapperClass = articleBackgroundClasses[index % articleBackgroundClasses.length] ?? '';
+
+              return (
+                <a 
+                  key={`${article.link}-${article.publishedAt}-${index}`}
+                  href={article.link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.articleCard}
+                  onMouseEnter={() => {
+                    setIsOverArticleCard(true);
+                    setArticleCursorText('Read article');
+                  }}
+                  onMouseLeave={() => {
+                    setIsOverArticleCard(false);
+                    setArticleCursorText(null);
+                  }}
+                >
+                  <div className={styles.articleCardWrapper}>
+                    <div className={`${styles.articleImageWrapper} ${wrapperClass}`}>
+                      <div className={styles.articleBlock}></div>
+                    </div>
+                    <h3 className={styles.articleTitle}>{article.title}</h3>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       <section ref={visionSectionRef} className={styles.visionSection}>
-        <div className={styles.visionStickyBox}>
-          <div className={styles.container}>
+        <div className={styles.visionWrapper}>
+          <div className={styles.visionContainer}>
             <p className={styles.visionText}>
               {(() => {
-                const text = "I will help your customers envision the future and show you the steps to get there";
+                const text = "I help your customers envision the future and help your business grow by showing you the steps to get there through strategic emotional experiences.";
                 const words = text.split(' ');
                 const totalChars = text.replace(/\s/g, '').length;
                 let charIndex = 0;
                 
                 return words.map((word, wordIndex) => {
-                  const wordChars = word.replace(/\s/g, '').split('');
-                  const wordStartProgress = charIndex / totalChars;
-                  const wordEndProgress = (charIndex + wordChars.length) / totalChars;
+                  const cleanWord = word.replace(/\n/g, '');
+                  const wordChars = cleanWord.split('');
+                  // Normalize character positions to 0-0.95 range so animation completes before scroll ends
+                  const normalizedTotal = totalChars * 0.95;
+                  const wordStartProgress = (charIndex / totalChars) * 0.95;
+                  const wordEndProgress = ((charIndex + wordChars.length) / totalChars) * 0.95;
                   
                   // Check if this is "future" or "steps" word
-                  const isFuture = word.toLowerCase() === 'future';
-                  const isSteps = word.toLowerCase() === 'steps';
+                  const isFuture = cleanWord.toLowerCase() === 'future';
+                  const isSteps = cleanWord.toLowerCase() === 'steps';
                   
                   const wordElements = wordChars.map((char, charIdx) => {
-                    const charStartProgress = (charIndex + charIdx) / totalChars;
-                    const charEndProgress = (charIndex + charIdx + 1) / totalChars;
+                    const charStartProgress = ((charIndex + charIdx) / totalChars) * 0.95;
+                    const charEndProgress = ((charIndex + charIdx + 1) / totalChars) * 0.95;
                     
                     // Calculate color based on scroll progress
-                    // Add a small buffer to ensure the last character fully animates
+                    // Normalize visionProgress to match the 0-0.95 range
+                    const normalizedProgress = Math.min(1, visionProgress / 0.95);
                     const progressRange = charEndProgress - charStartProgress;
-                    const charProgress = Math.max(0, Math.min(1, (visionProgress - charStartProgress) / (progressRange + 0.05)));
+                    const charProgress = Math.max(0, Math.min(1, (normalizedProgress - charStartProgress) / (progressRange + 0.05)));
                     
-                    let color;
-                    if (isFuture) {
-                      // Purple for "future" - same as navbar dot (#a855f7)
-                      // Transition from gray (#d3d3d3 = rgb(211,211,211)) to purple (#a855f7 = rgb(168,85,247))
-                      if (charProgress > 0.99) {
-                        color = '#a855f7';
-                      } else {
-                        const r = Math.round(211 - (211 - 168) * charProgress);
-                        const g = Math.round(211 - (211 - 85) * charProgress);
-                        const b = Math.round(211 - (211 - 247) * charProgress);
-                        color = `rgb(${r}, ${g}, ${b})`;
-                      }
-                    } else if (isSteps) {
-                      // Purple for "steps" - same as navbar dot (#a855f7)
-                      // Transition from gray (#d3d3d3 = rgb(211,211,211)) to purple (#a855f7 = rgb(168,85,247))
-                      if (charProgress > 0.99) {
-                        color = '#a855f7';
-                      } else {
-                        const r = Math.round(211 - (211 - 168) * charProgress);
-                        const g = Math.round(211 - (211 - 85) * charProgress);
-                        const b = Math.round(211 - (211 - 247) * charProgress);
-                        color = `rgb(${r}, ${g}, ${b})`;
-                      }
-                    } else {
-                      // Black for other words
-                      const grayValue = Math.round(211 - (211 * charProgress));
-                      color = charProgress > 0.99 ? '#000' : `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+                    // Start transparent and turn white on scroll
+                    // First phase: reveal with transparency
+                    const revealOpacity = Math.max(0, Math.min(0.6, charProgress * 0.6));
+                    
+                    // Second phase: transition to fully white as scrolling continues
+                    let opacity = revealOpacity;
+                    if (charProgress > 0.99) {
+                      // After text is fully revealed, transition from 0.6 opacity to 1.0 (fully white)
+                      const whiteTransitionStart = 0.95;
+                      const whiteTransitionEnd = 1.5;
+                      const whiteProgress = Math.max(0, Math.min(1, (visionProgress - whiteTransitionStart) / (whiteTransitionEnd - whiteTransitionStart)));
+                      opacity = 0.6 + (1 - 0.6) * whiteProgress;
                     }
+                    
+                    const color = `rgba(255, 255, 255, ${opacity})`;
                     
                     return (
                       <span
@@ -309,7 +412,7 @@ export default function Home() {
                   return (
                     <span key={wordIndex}>
                       {wordElements}
-                      {wordIndex < words.length - 1 && ' '}
+                      {wordIndex < words.length - 1 && (cleanWord.toLowerCase() === 'future' ? <br /> : ' ')}
                     </span>
                   );
                 });
@@ -319,231 +422,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className={styles.brandsSection}>
-        <div className={styles.brandsWrapper}>
-          <div className={styles.brandsContainer}>
-            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
-            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
-            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
-            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
-            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
-            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
-            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
-            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
-            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
-            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
-            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
-            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
-            {/* Gap for seamless loop */}
-            <div style={{ width: '48px', flexShrink: 0 }}></div>
-            {/* Duplicate for seamless loop */}
-            <div className={styles.brandLogo}><img src="/a.png" alt="Klarna" /></div>
-            <div className={styles.brandLogo}><img src="/b.png" alt="Ferrari" /></div>
-            <div className={styles.brandLogo}><img src="/c.png" alt="Lamborghini" /></div>
-            <div className={styles.brandLogo}><img src="/d.png" alt="Pepsi" /></div>
-            <div className={styles.brandLogo}><img src="/e.png" alt="ClaseAzul" /></div>
-            <div className={styles.brandLogo}><img src="/f.png" alt="F1" /></div>
-            <div className={styles.brandLogo}><img src="/g.png" alt="FIFA" /></div>
-            <div className={styles.brandLogo}><img src="/h.png" alt="Kick Sauber Stake F1" /></div>
-            <div className={styles.brandLogo}><img src="/i.png" alt="La Cimbali" /></div>
-            <div className={styles.brandLogo}><img src="/j.png" alt="Technogym" /></div>
-            <div className={styles.brandLogo}><img src="/k.png" alt="Pernod Ricard" /></div>
-            <div className={styles.brandLogo}><img src="/l.png" alt="KLM" /></div>
-          </div>
-        </div>
-      </section>
-
-      <section ref={servicesSectionRef} className={styles.servicesSection} id="expertise">
-        <div className={styles.container}>
-          <h2 className={styles.servicesTitle}>What I can do for you</h2>
-          <ul className={styles.servicesList}>
-            <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem1}`}>
-              <span className={styles.serviceNumber}>01</span>
-              <span className={styles.serviceName}>Design consultation</span>
-            </li>
-            <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem2}`}>
-              <span className={styles.serviceNumber}>02</span>
-              <span className={styles.serviceName}>Product Strategy</span>
-            </li>
-            <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem3}`}>
-              <span className={styles.serviceNumber}>03</span>
-              <span className={styles.serviceName}>Digital Product Design</span>
-            </li>
-            <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem4}`}>
-              <span className={styles.serviceNumber}>04</span>
-              <span className={styles.serviceName}>Design Systems</span>
-            </li>
-            <li className={`${styles.serviceItem} ${servicesVisible ? styles.serviceItemVisible : ''} ${styles.serviceItem5}`}>
-              <span className={styles.serviceNumber}>05</span>
-              <span className={styles.serviceName}>Startup Design Advisor</span>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section ref={articlesSectionRef} className={styles.articlesSection} id="articles">
-        <div className={styles.articlesWrapper}>
-          <div 
-            className={`${styles.articlesContainer} ${articlesVisible ? styles.animated : ''}`}
-            onMouseEnter={() => setCursorType('drag')}
-            onMouseLeave={() => setCursorType('default')}
-          >
-            <a 
-              href="https://medium.com/@mriganavdeka/beyond-the-algorithm-the-profound-power-of-product-detail-9058ccb5b2d4" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock1}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>Beyond the algorithm: The profound power of product detail</h3>
-              </div>
-            </a>
-            <a 
-              href="https://medium.com/@mriganavdeka/what-is-a-designer-eb5d352c9043" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock2}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>What is a Designer?</h3>
-              </div>
-            </a>
-            <a 
-              href="https://medium.com/@mriganavdeka/the-myth-of-customer-centricity-iconic-products-defied-their-users-and-why-you-should-too-b68ba4f3561c" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock3}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The Myth of 'Customer-Centricity': Iconic products defied their users</h3>
-              </div>
-            </a>
-            <a 
-              href="https://medium.com/@mriganavdeka/the-feature-funeral-why-your-saas-innovation-depends-on-killing-your-darlings-ff69988ed38a" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock4}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The Feature Funeral: Why your SaaS innovation depends on killing your darlings</h3>
-              </div>
-            </a>
-            <a 
-              href="https://medium.com/design-bootcamp/the-ai-ready-design-system-the-5-components-your-component-library-must-update-first-531309f35d85" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock5}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The AI-ready design system: The 5 components your component library must update first</h3>
-              </div>
-            </a>
-            <a 
-              href="https://medium.com/@mriganavdeka/the-drag-and-drop-delusion-why-no-code-solves-the-wrong-creative-pain-dcb1efba804c" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock6}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The Drag-&-Drop delusion: Why no-code solves the wrong creative pain</h3>
-        </div>
-            </a>
-          <a
-              href="https://medium.com/@mriganavdeka/the-ai-paradox-when-more-friction-leads-to-better-ux-and-stronger-retention-ec203aabb0f9" 
-            target="_blank"
-            rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock7}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The AI Paradox: When more friction leads to better UX and stronger retention</h3>
-              </div>
-          </a>
-          <a
-              href="https://medium.com/@mriganavdeka/the-data-shackles-why-being-data-driven-kills-your-next-breakthrough-afeb1157e997" 
-            target="_blank"
-            rel="noopener noreferrer"
-              className={`${styles.articleCardWrapper} ${styles.articleBlock8}`}
-            >
-              <div className={styles.articleBlock}></div>
-              <div className={styles.articleInfo}>
-                <h3 className={styles.articleTitle}>The data shackles: Why being data-driven kills your next breakthrough</h3>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.aboutSection} id="about">
-        <div className={styles.aboutContainer}>
-          <h2 className={styles.aboutTitle}>About me</h2>
-          <p className={styles.aboutIntro}>I'm passionate about creating digital experiences that make a real difference. With a decade of experience in product design, I've helped companies of all sizes transform their digital presence and better serve their users.</p>
-          <div className={styles.aboutCards}>
-            <div className={`${styles.aboutCard} ${styles.aboutCardEveryone}`}>
-              <div className={styles.aboutCardLabel}>For Everyone</div>
-              <p className={styles.aboutCardContent}>I'm a designer who cares about making beautiful things that help people and businesses. Currently a product designer at Bynder</p>
-            </div>
-            <div className={`${styles.aboutCard} ${styles.aboutCardManagers}`}>
-              <div className={styles.aboutCardLabel}>Managers</div>
-              <p className={styles.aboutCardContent}>I'm a product designer with a decade of experience across brand and product, at companies large and small in various design disciplines.</p>
-            </div>
-            <div className={`${styles.aboutCard} ${styles.aboutCardDesigners}`}>
-              <div className={styles.aboutCardLabel}>Designers</div>
-              <p className={styles.aboutCardContent}>I'm a systems thinker with a high bar for quality. From process to pixels, I'll collaborate with you, learn from you, and help make something we're proud of.</p>
-            </div>
-            <div className={`${styles.aboutCard} ${styles.aboutCardEngineers}`}>
-              <div className={styles.aboutCardLabel}>Engineers</div>
-              <p className={styles.aboutCardContent}>I'm {'{highly_technical}'} and while (I'm ≠ engineer anymore) I know my way /around & can speak "fluently" with you;</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer id="footer" ref={footerRef} className={styles.footer}>
-        <div className={styles.footerContainer}>
-          <div className={styles.footerLeft}>
-            <div className={styles.footerLogo}>Neerh Deka</div>
-            <p className={styles.footerTagline}>Product designer crafting digital experiences that make a real difference</p>
-            <div className={styles.footerImages}>
-              <div className={styles.footerImageWrapper}>
-                <img src="/image 58.png" alt="" className={styles.footerImage} />
-                <div className={styles.footerImageLogo}>
-                  <img src="/3158176.png" alt="Apple Photos" />
-                </div>
-              </div>
-              <div className={styles.footerImageWrapper}>
-                <img src="/image 57.png" alt="" className={styles.footerImage} />
-                <div className={styles.footerImageLogo}>
-                  <img src="/Apple_Maps_Logo_3D.png" alt="Apple Maps" />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className={styles.footerRight}>
-            <div className={styles.footerColumn}>
-              <div className={styles.footerLabel}>Contact</div>
-              <div className={styles.footerInfo}>
-                <p>mriganavdeka@gmail.com</p>
-                <p>Available for freelance projects</p>
-              </div>
-            </div>
-            <div className={styles.footerColumn}>
-              <div className={styles.footerLabel}>Links</div>
-              <div className={styles.footerLinks}>
-                <a href="https://medium.com/@mriganavdeka" target="_blank" rel="noopener noreferrer">Medium</a>
-                <a href="https://www.linkedin.com/in/mriganavdeka/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                <a href="/Mriganav Deka CV.pdf" download="Mriganav Deka CV.pdf">CV</a>
-              </div>
-            </div>
-          </div>
-    </div>
-      </footer>
+      <Footer />
     </>
   );
 }

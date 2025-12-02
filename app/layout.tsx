@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Crimson_Pro, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Merriweather, Inter, Fira_Sans } from "next/font/google";
 import "./globals.css";
-import LoadingAnimation from "./components/LoadingAnimation";
+import ScrollSmootherWrapper from "./components/ScrollSmootherWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,10 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const crimsonPro = Crimson_Pro({
-  variable: "--font-crimson-pro",
+const merriweather = Merriweather({
+  variable: "--font-merriweather",
   subsets: ["latin"],
-  weight: "700",
+  weight: "400",
 });
 
 const inter = Inter({
@@ -25,11 +25,17 @@ const inter = Inter({
   weight: "500",
 });
 
+const firaSans = Fira_Sans({
+  variable: "--font-fira-sans",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 export const metadata: Metadata = {
-  title: "Portfolio",
+  title: "Neerh Deka",
   description: "Portfolio website",
   icons: {
-    icon: '/logo-icon.svg',
+    icon: '/Favicon.ico',
   },
 };
 
@@ -40,9 +46,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${crimsonPro.variable} ${inter.variable}`}>
-        <LoadingAnimation />
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} ${merriweather.variable} ${inter.variable} ${firaSans.variable}`}>
+        <ScrollSmootherWrapper>
+          {children}
+        </ScrollSmootherWrapper>
       </body>
     </html>
   );
